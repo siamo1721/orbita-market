@@ -1,0 +1,5 @@
+rootProject.name = 'orbita-market'
+
+include 'api-gateway'
+include 'orders-service'
+include 'payments-service'
