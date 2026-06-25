@@ -4,8 +4,8 @@ services:
     container_name: api-gateway
     ports:
       - "8080:8080"
-    environment:
-      - SERVER_PORT=8080
+    networks:
+      - orbita-net
 
   orders:
     build: ./orders-service
@@ -13,9 +13,17 @@ services:
     ports:
       - "8081:8081"
     environment:
-      - SERVER_PORT=8081
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-orders:5432/orders_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
-      - api-gateway
+      postgres-orders:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - orbita-net
 
   payments:
     build: ./payments-service
@@ -23,6 +31,85 @@ services:
     ports:
       - "8082:8082"
     environment:
-      - SERVER_PORT=8082
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-payments:5432/payments_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
-      - api-gateway
+      postgres-payments:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - orbita-net
+
+  postgres-orders:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: orders_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_orders_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d orders_db" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - orbita-net
+
+  postgres-payments:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: payments_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_payments_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d payments_db" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - orbita-net
+
+  kafka:
+    image: apache/kafka:3.9.2
+    container_name: kafka
+    hostname: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 9092 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - orbita-net
+
+networks:
+  orbita-net:
+    driver: bridge
+
+volumes:
+  postgres_payments_data:
+  postgres_orders_data:
