@@ -1,17 +1,16 @@
 package org.mainshop.service;
 
-import org.mainshop.dto.BalanceResponse;
-import org.mainshop.dto.CreateAccountResponse;
+import org.mainshop.dto.AccountResponse;
 import org.mainshop.dto.TopUpRequest;
 
 import java.util.UUID;
 
 public interface AccountService {
 
-    CreateAccountResponse create (UUID userId);
+    AccountResponse create (UUID userId);
 
-    BalanceResponse getBalance (UUID userId);
+    AccountResponse getBalance (UUID userId);
 
-    BalanceResponse topUpBalance (UUID userId, TopUpRequest request);
+    AccountResponse topUpBalance (UUID userId, TopUpRequest request);
 
 }

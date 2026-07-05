@@ -1,10 +1,10 @@
 package org.mainshop.service.impl;
 
 import org.mainshop.dto.TopUpRequest;
+import org.mainshop.mapper.AccountMapper;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.AllArgsConstructor;
-import org.mainshop.dto.BalanceResponse;
-import org.mainshop.dto.CreateAccountResponse;
+import org.mainshop.dto.AccountResponse;
 import org.mainshop.entity.Account;
 import org.mainshop.enums.ErrorType;
 import org.mainshop.exception.BusinessException;
@@ -19,11 +19,11 @@ import java.util.UUID;
 public class AccountServiceImpl implements AccountService {
 
     private final AccountRepository accountRepository;
-
+    private final AccountMapper accountMapper;
 
     @Override
     @Transactional
-    public CreateAccountResponse create(UUID userId) {
+    public AccountResponse create(UUID userId) {
         if (userId == null) {
             throw new BusinessException(
                     ErrorType.MISSING_USER_ID,
@@ -44,14 +44,11 @@ public class AccountServiceImpl implements AccountService {
 
         accountRepository.save(account);
 
-        return new CreateAccountResponse(
-                account.getUserId(),
-                account.getBalance(),
-                "geocredits");
+        return accountMapper.toResponse(account);
     }
 
     @Override
-    public BalanceResponse getBalance(UUID userId) {
+    public AccountResponse getBalance(UUID userId) {
         if (userId == null) {
             throw new BusinessException(
                     ErrorType.MISSING_USER_ID,
@@ -65,16 +62,12 @@ public class AccountServiceImpl implements AccountService {
                         "Аккаунт для пользователя с ID " + userId + " не найден"
                 ));
 
-        return new BalanceResponse(
-                account.getUserId(),
-                account.getBalance(),
-                "geocredits"
-        );
+        return accountMapper.toResponse(account);
     }
 
     @Override
     @Transactional
-    public BalanceResponse topUpBalance(UUID userId, TopUpRequest request) {
+    public AccountResponse topUpBalance(UUID userId, TopUpRequest request) {
 
         if (userId == null) {
             throw new BusinessException(
@@ -98,11 +91,7 @@ public class AccountServiceImpl implements AccountService {
         account.setBalance(account.getBalance() + request.amount());
         accountRepository.save(account);
 
-        return new BalanceResponse(
-                account.getUserId(),
-                account.getBalance(),
-                "geocredits"
-        );
+        return accountMapper.toResponse(account);
     }
 
 }
