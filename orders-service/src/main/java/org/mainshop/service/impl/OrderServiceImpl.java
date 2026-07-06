@@ -1,14 +1,21 @@
 package org.mainshop.service.impl;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import org.mainshop.dto.CreateOrderRequest;
 import org.mainshop.dto.OrderResponse;
 import org.mainshop.entity.Order;
 import org.mainshop.enums.ErrorType;
 import org.mainshop.enums.OrderStatus;
+import org.mainshop.enums.OutboxEventType;
+import org.mainshop.enums.OutboxStatus;
 import org.mainshop.enums.ProductType;
 import org.mainshop.exception.BusinessException;
+import org.mainshop.kafka.event.OrderPaymentRequested;
 import org.mainshop.mapper.OrderMapper;
+import org.mainshop.outbox.Outbox;
+import org.mainshop.outbox.OutboxRepository;
 import org.mainshop.repository.OrderRepository;
 import org.mainshop.service.OrderService;
 import org.springframework.stereotype.Service;
@@ -16,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 
@@ -25,6 +33,8 @@ public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
     private final OrderMapper orderMapper;
+    private final OutboxRepository outboxRepository;
+    private final ObjectMapper objectMapper;
 
     @Override
     @Transactional
@@ -79,8 +89,33 @@ public class OrderServiceImpl implements OrderService {
         order.setCreatedAt(Instant.now());
 
         orderRepository.save(order);
+        savePaymentRequestedOutbox(order);
 
         return orderMapper.toResponse(order);
+    }
+
+    private void savePaymentRequestedOutbox(Order order) {
+        UUID eventId = UUID.randomUUID();
+        Instant occurredAt = Instant.now();
+
+        OrderPaymentRequested event = new OrderPaymentRequested(
+                eventId,
+                order.getOrderId(),
+                order.getUserId(),
+                order.getPrice(),
+                occurredAt
+        );
+
+        Map<String, Object> payload = objectMapper.convertValue(event, new TypeReference<>() {});
+
+        Outbox outbox = new Outbox();
+        outbox.setEventId(eventId);
+        outbox.setEventType(OutboxEventType.ORDER_PAYMENT_REQUESTED);
+        outbox.setPayload(payload);
+        outbox.setStatus(OutboxStatus.PENDING);
+        outbox.setCreatedAt(occurredAt);
+
+        outboxRepository.save(outbox);
     }
 
     @Override
