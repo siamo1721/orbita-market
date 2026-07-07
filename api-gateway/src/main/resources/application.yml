@@ -1,0 +1,22 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: payments
+          uri: http://payments:8082
+          predicates:
+            - Path=/payments/**
+          filters:
+            - RewritePath=/payments/(?<segment>.*), /api/v1/payments/${segment}
+
+        - id: orders
+          uri: http://orders:8081
+          predicates:
+            - Path=/orders/**
+          filters:
+            - RewritePath=/orders/(?<segment>.*), /api/v1/orders/${segment}
