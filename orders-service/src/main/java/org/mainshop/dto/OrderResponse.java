@@ -1,6 +1,8 @@
 package org.mainshop.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.mainshop.enums.FailureReasonType;
 import org.mainshop.enums.OrderStatus;
 import org.mainshop.enums.ProductType;
 
@@ -12,6 +14,9 @@ public record OrderResponse (
         OrderStatus status,
         @JsonProperty("product_type") ProductType productType,
         Long price,
-        @JsonProperty("created_at") Instant createdAt
+        @JsonProperty("created_at") Instant createdAt,
+        @JsonProperty("failure_reason")
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        FailureReasonType failureReason
 ) {
 }

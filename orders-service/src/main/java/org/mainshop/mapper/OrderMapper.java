@@ -14,7 +14,8 @@ public class OrderMapper {
                 order.getStatus(),
                 order.getProductType(),
                 order.getPrice(),
-                order.getCreatedAt()
+                order.getCreatedAt(),
+                order.getFailureReason()
         );
     }
 
