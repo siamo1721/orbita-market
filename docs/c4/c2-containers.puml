@@ -1,0 +1,29 @@
+@startuml c2-containers
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+title OrbitaMarket — C2 Containers
+
+Person(user, "Пользователь", "Оператор / аналитик")
+
+System_Boundary(orbita, "OrbitaMarket") {
+    Container(gateway, "API Gateway", "Spring Cloud Gateway", "HTTP routing, проброс X-User-Id")
+    Container(orders, "Orders Service", "Spring Boot", "Заказы, outbox, consumer результатов оплаты")
+    Container(payments, "Payments Service", "Spring Boot", "Счета, списание, outbox ответов")
+    ContainerDb(ordersDb, "PostgreSQL orders_db", "PostgreSQL 16", "orders, outbox, inbox")
+    ContainerDb(paymentsDb, "PostgreSQL payments_db", "PostgreSQL 16", "account, processed_payments, outbox, inbox")
+    ContainerQueue(kafka, "Kafka", "Apache Kafka 3.9", "order.payment.* топики")
+}
+
+Rel(user, gateway, "HTTP", ":8080")
+Rel(gateway, orders, "HTTP", "/orders/** → :8081")
+Rel(gateway, payments, "HTTP", "/payments/** → :8082")
+
+Rel(orders, ordersDb, "JDBC", "read/write")
+Rel(payments, paymentsDb, "JDBC", "read/write")
+
+Rel(orders, kafka, "publish", "order.payment.requested")
+Rel(kafka, payments, "consume", "order.payment.requested")
+Rel(payments, kafka, "publish", "completed / failed")
+Rel(kafka, orders, "consume", "completed / failed")
+
+@enduml
